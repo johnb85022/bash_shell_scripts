@@ -1,2 +1,3 @@
 # bash_shell_scripts
-Bash Shell Scripts I have done.
+Some bash shell scripts that I have done.
+No allway perfect, but useful. JB
