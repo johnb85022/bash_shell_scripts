@@ -36,7 +36,7 @@ do
         OUTPUT="scan.output.$D_STR.$(uuidgen).txt"
         SCAN_CMD="nmap -v -sV -T4 -O -oG $OUTPUT -F --version-light"
         echo "dot dot dot"
-        $($SCAN_CMD ${file_array[$i]})
+        eval $SCAN_CMD ${file_array[$i]}
 
 done
 
