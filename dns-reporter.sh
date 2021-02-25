@@ -107,7 +107,7 @@ done
 
 # print the maps
 
-printf "DNS Server $dnshost">>$OUTFILE
+printf "DNS Server $dnshost">$OUTFILE
 printf "\n">>$OUTFILE
 printf "IP Map...Count ${#ip_map[@]} $dnshost\n">>$OUTFILE
 for my_keys in "${!ip_map[@]}" ; do
