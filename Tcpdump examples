@@ -1,0 +1,10 @@
+Handy tcpdumps I like.
+Examaple of filtering out stuff. -c helps to stop it if I forget.
+tcpdump '( (not arp) and (not port 22) and ( not port 68) )' -c 99999
+
+Can help us to see details of the protocols. 
+tcpdump '( (not arp) and (not port 22) and ( not port 68) )' -vv 
+
+Will try to open the packets and show us ASCCI 
+tcpdump '( (not arp) and (not port 22) and ( not port 68) )' -vv -A 
+
