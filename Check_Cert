@@ -1,0 +1,40 @@
+#!/bin/bash
+# JB
+# tested with 10.92.255.103 expired.badssl.com in the file, 
+SSLLIST="ssl.list.txt"
+NUMBEROFDAYS=1
+let CertificateExpirationWarningTrigger=60*60*24*$NUMBEROFDAYS
+RETURN=""
+SSLHISFILE="ssl.expiration.history.txt"
+SSLLOGFILE="ssl.expiration.$(date +%A).txt"
+
+## echo $CertificateExpirationWarningTrigger
+#
+# 60*60*24 is one day campers
+#
+
+for x in $(<$SSLLIST)
+do
+        ## echo "Looking $x ..."
+        echo | openssl s_client -servername "$x" -connect "$x":443 2>/dev/null | openssl x509 -noout -checkend $CertificateExpirationWarningTrigger
+        RETURN=$?
+        ## echo "Return code for $x $RETURN"
+        # return is number not a string
+        if [ $RETURN -eq 1 ] ; then
+                ## echo "$x IS OLD... collect info and log and..."
+                RESULT=$(echo | openssl s_client -servername "$x" -connect "$x":443 2>/dev/null | openssl x509 -noout -enddate)
+                echo "$x is less then $NUMBEROFDAYS return $RESULT"
+                echo "$x is less then $NUMBEROFDAYS return $RESULT" >> $SSLHISFILE
+                echo "$x is less then $NUMBEROFDAYS return $RESULT" >  $SSLLOGFILE
+        else
+                ##echo "$x is not OLD collect info and log it."
+                true
+        fi
+done
+
+# SEE
+# I based mine on his, some diffrences, but same ideas, I need some logs, etc. 
+# -checkend is the real working bit, 
+# https://megamorf.gitlab.io/2019/07/01/check-if-certificate-file-expires-in-n-days/
+# Ende.
+
