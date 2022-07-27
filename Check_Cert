@@ -38,3 +38,17 @@ done
 # https://megamorf.gitlab.io/2019/07/01/check-if-certificate-file-expires-in-n-days/
 # Ende.
 
+# just ref info mega verbose when pipe openssl verify is in play
+ # good idea, but tossed a LOT of errros , near all tested errror
+        # errors other then just expire age , verify did not need format spec x509, interusting
+        # no else here, just looking for other then age errors
+        ## echo "Looking $x ..."
+        #echo | openssl s_client -servername "$x" -connect "$x":443 2>/dev/null | openssl verify
+        #RETURN=$?
+        ## echo "Return code for $x $RETURN"
+        # return is number not a string
+        #if [ $RETURN -gt 0 ] ; then
+        #       echo "$x cert error return $RESULT"
+        #       echo "$x cert error return $RESULT" >> $SSLHISFILE
+        #       echo "$x cert error return $RESULT" >  $SSLLOGFILE
+        #fi
