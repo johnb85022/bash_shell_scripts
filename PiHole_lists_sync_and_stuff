@@ -1,0 +1,126 @@
+#!/bin/bash
+# Who: JB and AW
+# When: Who is asking?
+# Why: To update good lists to the PIHOLE
+#      and add TLD blocks
+# How: Collect evil domain lists
+#      then remove the evil TDLs from the lists file
+#      final.lists.txt is published on the web page
+#      wilds is the TLD blocks, copy and sync,
+# What: All is auto, expect the wilds are manual maint
+#       the wilds file are the domains to outright TLD block
+#       end goal , pubish the wilds and the new lists
+# Debug: open the echo's or set -x
+# Updates: added ad-hoc to move the files and run scripts
+#
+#######################################################
+# to see how things are done
+#set -x
+
+# for lang cleanup helps the greps
+# lot more sed this time
+LANG=C
+export LANG
+# the vars
+D_STR=$(date --date '1days ago' "+%Y.%m.%d")
+WILDFILE=wildcard.list.txt
+WHITEFILE=white.list.txt
+MYTMP=mytmp.txt
+RAWFILE=raw.download.txt
+SOURCEFILE=collect.list.txt
+PLACEHOLDER=placeholder.txt
+FINAL=final.lists.txt
+
+# Wild file is TLD that we just dont Fing care about ( go read the book )
+# the wild file is loaded to the PI hole like this
+# pihole --wild $(cat /home/automation/wildcard.list.txt)
+# the wilds are BLOCKS at the TLD level
+
+# clean up
+[ -a $RAWFILE ] && rm $RAWFILE
+
+# allow comments in the source file
+for x in $(grep -v '#' $SOURCEFILE)
+do
+        # What doing  ?
+        # echo "Collecting $x"
+        # adding filters to the wget pipe to reduce file size and speed things up sed sed sed
+        wget -q -O - $x | grep -v -e "#" |tr '[:upper:]' '[:lower:]' | sed -e 's/0.0.0.0//g' -e 's/127.0.0.1//g' -e 's/[[:blank:]]//g' -e '/^[[:space:]]*$/d' >> $RAWFILE
+        # echo "URL $x" >> $RAWFILE
+
+done
+# echo "wget is done"
+
+# the wilds needs to be lower case for match ups later, cheep tr and basic clean
+# echo "copy..."
+cp $WILDFILE $D_STR.$WILDFILE
+cp $WILDFILE $MYTMP
+# echo "pipe to lower"
+cat $MYTMP |tr '[:upper:]' '[:lower:]' |sort -u --buffer-size=1G --random-sort > $WILDFILE
+# ls -l $MYTMP $WILDFILE
+
+# filters filters filters lots of clean clean clean
+# the lower has been done before, the grep -v are to take away funky chars , no dns can have a space
+# doing it here to , runs fast so no need to put it on the wget pipe
+# echo "filters"
+grep . $RAWFILE |tr -s ' ' |tr -d ' ' |tr -d '\r' |tr '[:upper:]' '[:lower:]' |grep -v -e "^$" -e "[><]" |grep  -v -e "[^a-z.0-9\_\-]" |sort -u --buffer-size=1G --random-sort > $PLACEHOLDER
+
+# sed, take away the wild cards
+# drop out each line that is found in the wilds file
+# echo "start for sed wilds..."
+for x in $(<$WILDFILE) ; do sed -i "s/.*.$x$//g" $PLACEHOLDER; done
+
+# final clean, sed leaves lines, this sort removes blanks
+# echo "sorting"
+sort -u --buffer-size=1G --random-sort $PLACEHOLDER > $FINAL
+
+# some info if we want to see results
+# echo "done sorting"
+# Peek final.txt vs placeholder to see the reduction
+# echo "Reduction counts..."
+# wc -l $RAWFILE $FINAL
+cp $FINAL $D_STR.$FINAL
+
+# Now to push and sync wilds to the piholes, the final.lists.txt to the S3 for
+# the web page the pi hole can read from the web page
+# used ad-hoc commands , could be play book too, just not yet
+######### update S3 bucket , the bucket has web pages attached the PI reads from, 
+# publish to youe web page as you see fir / need. 
+ansible MYs3dropoffhost -b -m shell -a '/usr/local/bin/aws s3 cp --acl "public-read" /home/fooroobar s3://foobar/ --recursive --exclude "*" --include "*.txt"'
+# apply the wilds to the pihole
+ansible mypihole -b -m copy -a "src=/home/svcansible/BlockListReduce/go-wild-list.sh dest=/home/svcansible/go-wild-list.sh mode=0754 owner=root"
+ansible mypihole -b -m copy -a "src=/home/svcansible/BlockListReduce/$WILDFILE dest=/home/svcansible/$WILDFILE"
+ansible mypihole -b -m copy -a "src=/home/svcansible/BlockListReduce/$WHITEFILE dest=/home/svcansible/$WHITEFILE"
+# add in copy white listed sites to the server, add commands in go wild sh for local loading
+#
+ansible mypihole -b -m shell -a "/home/ansible/go-wild-list.sh"
+
+# the go wild does a reload-lists and the restartdns, here in case we want it later
+#ansible pihole -b -m shell -a "pihole restartdns reload-lists
+
+# save some history
+D_STR=$(date "+%Y.%m.%d")
+OUTFILE="/home/svcansible/BlockListReduce/history/pi.lists.info.$D_STR.$(uuidgen).txt"
+echo "$(date) , Listing and line count of the lists." >> "/home/svcansible/BlockListReduce/peek.run.log"
+echo "$D_STR ..." > "$OUTFILE"
+ansible pihole -m shell -a 'pihole -w -l;pihole --white-wild -l' >> "$OUTFILE"
+ansible pihole -m shell -a 'pihole -w -l|wc -l;pihole --white-wild -l|wc -l' >> "$OUTFILE"
+ansible pihole -m shell -a 'pihole -b -l;pihole --wild -l' >> "$OUTFILE"
+ansible pihole -m shell -a 'pihole -b -l|wc -l;pihole --wild -l|wc -l' >> "$OUTFILE"
+
+# REF
+# ssh pihole /home/automation/go-wild-list.sh
+# ssh pihole  "pihole updateGravity;pihole -g"
+# the go wild script here for ref
+##!/bin/bash
+## runs local to the pihole host, see ansible ad hoc for use
+## wild default is black
+##pihole --wild $(cat /home/svcansible/wildcard.list.txt)
+# just w is exact match, of litte use but here to be safe, cant hurt
+##pihole -w $(cat /home/svcansible/white.list.txt)
+# the regex white maybe is wide in scope, but should help users
+##pihole --white-wild $(cat /home/svcansible/white.list.txt)
+##pihole restartdns reload-lists
+# ende #
+
+# Ende
