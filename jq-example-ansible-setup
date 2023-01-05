@@ -1,8 +1,6 @@
 # is it friday yet
 ansible localhost -m setup -a "filter=*date*" | sed '1 s/^.*$/{/' |jq '.ansible_facts.ansible_date_time.weekday' |grep -q "Fri" && ( cowsay -f tux "$(date "+%A") YES"|lolcat -p 1 -F .01 -a ) || cowsay $(date "+%D %A")
 
-ansible localhost -m setup -a "filter=*date*" | sed '1 s/^.*$/{/' |jq '.ansible_facts.ansible_date_time.weekday' |grep -q "Fri" && ( cowsay -f tux "$(date "+%A") YES"|lolcat -p 1 -F .01 -a ) || cowsay "NOT FRIDAY $(date "+%D %A")"
-
 # another sed method 
 ansible localhost -m setup -a "filter=*date*" |sed '1c {'|jq '.ansible_facts.ansible_date_time.weekday'''
 
@@ -19,7 +17,7 @@ ansible localhost -m setup -a "filter=*date*" |sed '1c {'|jq -c '.ansible_facts.
 ansible localhost -m setup -a "filter=*date*" |sed '1c {'|jq -c '.ansible_facts.ansible_date_time'''|cut -d ',' -f1,15
 {"date":"2023-01-05","weekday":"Thursday"
 
-# better two field select  nothe ',' is a select field sep
+# better two field select  noe the ',' is a select field sep
 
  ansible localhost -m setup -a "filter=*date*" |sed '1c {' | jq '. | .ansible_facts.ansible_date_time.weekday , .ansible_facts.ansible_date_time.year'
 "Thursday"
