@@ -1,0 +1,26 @@
+# is it friday yet
+ansible localhost -m setup -a "filter=*date*" | sed '1 s/^.*$/{/' |jq '.ansible_facts.ansible_date_time.weekday' |grep -q "Fri" && ( cowsay -f tux "$(date "+%A") YES"|lolcat -p 1 -F .01 -a ) || cowsay $(date "+%D %A")
+
+ansible localhost -m setup -a "filter=*date*" | sed '1 s/^.*$/{/' |jq '.ansible_facts.ansible_date_time.weekday' |grep -q "Fri" && ( cowsay -f tux "$(date "+%A") YES"|lolcat -p 1 -F .01 -a ) || cowsay "NOT FRIDAY $(date "+%D %A")"
+
+# another sed method 
+ansible localhost -m setup -a "filter=*date*" |sed '1c {'|jq '.ansible_facts.ansible_date_time.weekday'''
+
+# will catch the bad line and kick output just the same, not a fix, but handy 
+ansible localhost -m setup -a "filter=*date*" || jq -R -r '. as $line | try fromjson catch $line'
+
+# no catch , got output 
+ansible localhost -m setup -a "filter=*date*" | jq  -R  '.'
+
+# Now I can cut -d ',' if I want too
+ansible localhost -m setup -a "filter=*date*" |sed '1c {'|jq -c '.ansible_facts.ansible_date_time'''
+
+# two fields any one, funky, but has info 
+ansible localhost -m setup -a "filter=*date*" |sed '1c {'|jq -c '.ansible_facts.ansible_date_time'''|cut -d ',' -f1,15
+{"date":"2023-01-05","weekday":"Thursday"
+
+# better two field select  nothe ',' is a select field sep
+
+ ansible localhost -m setup -a "filter=*date*" |sed '1c {' | jq '. | .ansible_facts.ansible_date_time.weekday , .ansible_facts.ansible_date_time.year'
+"Thursday"
+"2023"
